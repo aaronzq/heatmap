@@ -16,6 +16,7 @@ from mayavi.core.ui.api import MayaviScene, SceneEditor, MlabSceneModel
 
 import pandas as pd
 
+
 def readScore(filename):
     table = pd.read_csv(filename)
     scoreStr = table.columns.tolist()
@@ -29,7 +30,9 @@ def readScore(filename):
             f = float(f)
         
         score.append(f)
-    return score,len(score)
+    #Normalize the score
+    scoreNorm = [sc/max(score)*50000 for sc in score]
+    return scoreNorm,len(scoreNorm)
 
 def locateElectron(space,score,x,y,z):
     N = len(score)
