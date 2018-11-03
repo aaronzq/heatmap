@@ -16,6 +16,13 @@ from mayavi.core.ui.api import MayaviScene, SceneEditor, MlabSceneModel
 
 import pandas as pd
 
+import ecogcorr as ecCorr
+
+
+
+
+
+
 
 def readScore(filename):
     table = pd.read_csv(filename)
@@ -34,8 +41,18 @@ def readScore(filename):
     scoreNorm = [sc/max(score)*50000 for sc in score]
     return scoreNorm,len(scoreNorm)
 
+def readPos(filename):
+    table = pd.read_csv(filename)
+    xtable = table.loc[0].tolist()
+    ytable = table.loc[1].tolist()
+    ztable = table.loc[2].tolist()
+    x = [int(i) for i in xtable]
+    y = [int(i) for i in ytable]
+    z = [int(i) for i in ztable]
+    return x,y,z
+
 def locateElectron(space,score,x,y,z):
-    N = len(score)
+    N = len(x)
     
     for i in range(0,N):
         space[x[i],y[i],z[i]] = score[i]
@@ -68,6 +85,12 @@ def diluteMask(mask):
     dMask = createMask(dMask)
     volDilute = calcVolume(dMask)
     return dMask,volOri,volDilute
+
+def convolutionHeatmap(bSpace,electronScore,electronX,electronY,electronZ,mask):
+    eSpace = locateElectron(bSpace,electronScore,electronX,electronY,electronZ)
+    cSpace = ndimage.gaussian_filter(eSpace,5)
+    return cSpace*mask
+
 
 def compressArray(imgArray):
     ls1d = []
@@ -115,60 +138,76 @@ def extractHeatmapData(lsCol,index,row,col,depth):
     ls1d = lsCol[index]
     return decompressArray(ls1d,row,col,depth)
 
-
+## Load MRI brain data
 print('Load MRI cerebrum data')    
-brainData = nib.load('./T1.cerebrum.mask.nii.gz')
+#brainData = nib.load('./T1.cerebrum.mask.nii.gz')
+brainData = nib.load('./standard.cerebrum.mask.nii.gz')
 brainArray = brainData.get_fdata()
 brainMask = createMask(brainArray)
 brainDMask,volOri,volDilute = diluteMask(brainMask)
 print('Load finished')   
+#######################################################################
 
-
+## Create heatmap space and grab electrodes information
+print('Create Heatmap Space and grab electrodes')
 row,col,depth = brainArray.shape
 spaceSize = [row,col,depth]
 bSpace = np.zeros(spaceSize)
 
-electronScore = [[100000,400000,300000,500000,100000],[200000,300000,400000,100000,500000],
-[300000,200000,500000,100000,400000],[400000,100000,100000,100000,100000]]
+#electronScore = [[100000,400000,300000,500000,100000],[200000,300000,400000,100000,500000],
+#[300000,200000,500000,100000,400000],[400000,100000,100000,100000,100000]]
+#
+#electronX = [55,58,60,70,80]
+#electronY = [89,78,66,55,43]
+#electronZ = [65,71,77,83,89]
 
-electronX = [55,58,60,70,80]
-electronY = [89,78,66,55,43]
-electronZ = [65,71,77,83,89]
+timestep = 1 # no temporal stamp
+
+#filename = './Power_Jake/ECOG001.csv'
+#electronScore,channelNum = readScore(filename)
+#electronX = ecCorr.x
+#electronY = ecCorr.y
+#electronZ = ecCorr.z
+
+filename = './Power_Jake/EEG1.csv'
+electronScore,channelNum = readScore(filename)
+electronX,electronY,electronZ = readPos('eegcorr.csv')
 
 
+# obtain the initial Vmax and Vmin
+heatmap = convolutionHeatmap(bSpace,electronScore,electronX,electronY,electronZ,brainDMask)
+elecVmax = heatmap.max()
+elecVmin = heatmap.min()
+
+print('Electrodes set')
 #######################################################################
-eSpace = locateElectron(bSpace,electronScore[0],electronX,electronY,electronZ)
-cSpace = ndimage.gaussian_filter(eSpace,5)
-elecVmax = cSpace.max()
-elecVmin = cSpace.min()
 
-heatmapStore,comRatio = storeHeatmapData(electronScore,electronX,electronY,electronZ,brainDMask)
 
-#dataStore = []
-#for h in range(20):
-#    eSpace = locateElectron(bSpace,electronScore[h],electronX,electronY,electronZ)
-#    cSpace = ndimage.gaussian_filter(eSpace,5)
-#    dataStore.append(cSpace*brainDMask)
+#heatmapStore,comRatio = storeHeatmapData(electronScore,electronX,electronY,electronZ,brainDMask)
+
 
 class MyModel(HasTraits):
-    time = Range(0,0,0)
+    time = Range(0,timestep-1,0)
 #    button = Button('Electrodes')
     scene = Instance(MlabSceneModel,())
 
     plot = Instance(PipelineBase)
     
-#    @on_trait_change('button1')
+#    @on_trait_change('button')
 #    def update_electrodes(self):
-#    
+        
+   
     @on_trait_change('time,scene.activated')
     def update_plot(self):
-        heatmap = extractHeatmapData(heatmapStore,self.time,*spaceSize)
+#        heatmap = extractHeatmapData(heatmapStore,self.time,*spaceSize)
+        heatmap = convolutionHeatmap(bSpace,electronScore,electronX,electronY,electronZ,brainDMask)
         if self.plot is None:
             source = self.scene.mlab.pipeline.scalar_field(heatmap)
-#            source = self.scene.mlab.pipeline.scalar_field(cSpace*brainMask)
             self.plot = self.scene.mlab.pipeline.volume(source,vmax=elecVmin + .8*(elecVmax-elecVmin), vmin=elecVmin,figure=self.scene.mayavi_scene)
+            
             source2 = self.scene.mlab.pipeline.scalar_field(brainMask)
             self.scene.mlab.pipeline.iso_surface(source2,vmin=0,vmax=1,opacity=1.0,colormap='gray',figure=self.scene.mayavi_scene)
+            
             self.scene.mlab.view(azimuth=180,elevation=80,distance=350)
         else:
             self.plot.mlab_source.scalars = heatmap
