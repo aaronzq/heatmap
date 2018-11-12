@@ -19,11 +19,6 @@ import pandas as pd
 import ecogcorr as ecCorr
 
 
-
-
-
-
-
 def readScore(filename):
     table = pd.read_csv(filename)
     scoreStr = table.columns.tolist()
@@ -164,19 +159,19 @@ bSpace = np.zeros(spaceSize)
 timestep = 1 # no temporal stamp
 
 ##filename = './Power_Jake/ECOG001.csv'
-#filename = './PAC_Mah/Max_PAC_ECOG1.csv'
+filename = './PAC_Mah/Max_PAC_ECOG1.csv'
 ##filename = './PAC_Mah/Mean_PAC_ECOG1.csv'
-#electronScore,channelNum = readScore(filename)
-#electronX = ecCorr.x
-#electronY = ecCorr.y
-#electronZ = ecCorr.z
+electronScore,channelNum = readScore(filename)
+electronX = ecCorr.x
+electronY = ecCorr.y
+electronZ = ecCorr.z
 
 
 #filename = './Power_Jake/EEG1.csv'
-filename = './PAC_Mah/Max_PAC_EEG1.csv'
+#filename = './PAC_Mah/Max_PAC_EEG1.csv'
 #filename = './PAC_Mah/Mean_PAC_EEG1.csv'
-electronScore,channelNum = readScore(filename)
-electronX,electronY,electronZ = readPos('eegcorr.csv')
+#electronScore,channelNum = readScore(filename)
+#electronX,electronY,electronZ = readPos('eegcorr.csv')
 
 
 # obtain the initial Vmax and Vmin
@@ -193,15 +188,24 @@ print('Electrodes set')
 
 class MyModel(HasTraits):
     time = Range(0,timestep-1,0)
-#    button = Button('Electrodes')
+    button = Button('Electrodes')
+    
     scene = Instance(MlabSceneModel,())
-
     plot = Instance(PipelineBase)
     
-#    @on_trait_change('button')
-#    def update_electrodes(self):
+    onoff = 1
+    
+    @on_trait_change('button')
+    def update_electrodes(self):
+        if self.onoff==1:
+            self.elec.stop()
+        else:
+            self.elec = self.scene.mlab.points3d(electronX, electronY, electronZ, scale_factor=5, resolution=20, scale_mode='none', color = (1,0,1), opacity = 1.0, figure=self.scene.mayavi_scene)
+            self.scene.mlab.view(azimuth=180,elevation=80,distance=350)
         
-   
+        self.onoff += 1
+        self.onoff = self.onoff%2
+        
     @on_trait_change('time,scene.activated')
     def update_plot(self):
 #        heatmap = extractHeatmapData(heatmapStore,self.time,*spaceSize)
@@ -209,13 +213,13 @@ class MyModel(HasTraits):
         if self.plot is None:
             source = self.scene.mlab.pipeline.scalar_field(heatmap)
             self.plot = self.scene.mlab.pipeline.volume(source,vmax=elecVmin + .8*(elecVmax-elecVmin), vmin=elecVmin,figure=self.scene.mayavi_scene)
-            
             source2 = self.scene.mlab.pipeline.scalar_field(brainMask)
             self.scene.mlab.pipeline.iso_surface(source2,vmin=0,vmax=1,opacity=1.0,colormap='gray',figure=self.scene.mayavi_scene)
-            
-            self.scene.mlab.points3d(electronX, electronY, electronZ, scale_factor=5, resolution=20, scale_mode='none', color = (1,0,1), opacity = 1.0, figure=self.scene.mayavi_scene)
-            
-    
+
+
+ 
+            self.elec = self.scene.mlab.points3d(electronX, electronY, electronZ, scale_factor=5, resolution=20, scale_mode='none', color = (1,0,1), opacity = 1.0, figure=self.scene.mayavi_scene)
+                
             self.scene.mlab.view(azimuth=180,elevation=80,distance=350)
         else:
             self.plot.mlab_source.scalars = heatmap
@@ -223,7 +227,7 @@ class MyModel(HasTraits):
     view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
                      height=700, width=800, show_label=False),
                 Group(
-                        '_', 'time',
+                        '_', 'time', 'button'
                      ),
                 resizable=True,
                 )
