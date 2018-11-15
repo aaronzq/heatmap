@@ -12,7 +12,6 @@ from mayavi.core.ui.api import MayaviScene, SceneEditor, MlabSceneModel
 
 import pandas as pd
 
-import ecogcorr as ecCorr
 
 
 NO_READIN = 0
