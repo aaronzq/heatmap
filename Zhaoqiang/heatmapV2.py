@@ -280,6 +280,3 @@ if __name__ == '__main__':
     Test.generateHeatmap()
 
     Test.show()
-    
-    
-    
