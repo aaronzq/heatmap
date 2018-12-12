@@ -269,14 +269,14 @@ class MyModel(HasTraits):
 
     
 if __name__ == '__main__':
-    brain = './standard.cerebrum.mask.nii.gz'
+    brain = '../testdata/standard.cerebrum.mask.nii.gz'
     Test = HeatMap(brain)
 
-    Test.readEEG_Pos('eegcorr.csv')
-    Test.readEEG_Score('./Power_Jake/EEG1.csv')
+    Test.readEEG_Pos('../testdata/eegcorr.csv')
+    Test.readEEG_Score('../testdata/Power_Jake/EEG1.csv')
 
-    Test.readECOG_Pos('eegcorr.csv')  #no ECoG coordinates currently, use EEG's for subsitute temporarily
-    Test.readECOG_Score('./Power_Jake/ECOG001.csv')
+    Test.readECOG_Pos('../testdata/eegcorr.csv')  #no ECoG coordinates currently, use EEG's for subsitute temporarily
+    Test.readECOG_Score('../testdata/Power_Jake/ECOG001.csv')
 
     Test.generateHeatmap()
 
