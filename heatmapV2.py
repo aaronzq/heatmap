@@ -245,6 +245,7 @@ class MyModel(HasTraits):
             #############################################################################
 
             self.scene.mlab.view(azimuth=180,elevation=80,distance=350)
+            self.scene.mlab.show_pipeline()
         else:
             self.electrode = ELECTRODE_OFF
             self.elec.stop()           

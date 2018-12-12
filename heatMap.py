@@ -158,8 +158,8 @@ bSpace = np.zeros(spaceSize)
 
 timestep = 1 # no temporal stamp
 
-##filename = './Power_Jake/ECOG001.csv'
-filename = './PAC_Mah/Max_PAC_ECOG1.csv'
+filename = './Power_Jake/ECOG001.csv'
+#filename = './PAC_Mah/Max_PAC_ECOG1.csv'
 ##filename = './PAC_Mah/Mean_PAC_ECOG1.csv'
 electronScore,channelNum = readScore(filename)
 electronX = ecCorr.x
@@ -212,7 +212,7 @@ class MyModel(HasTraits):
         heatmap = convolutionHeatmap(bSpace,electronScore,electronX,electronY,electronZ,brainDMask)
         if self.plot is None:
             source = self.scene.mlab.pipeline.scalar_field(heatmap)
-            self.plot = self.scene.mlab.pipeline.volume(source,vmax=elecVmin + .8*(elecVmax-elecVmin), vmin=elecVmin,figure=self.scene.mayavi_scene)
+            self.plot = self.scene.mlab.pipeline.volume(source,vmax=elecVmin + .5*(elecVmax-elecVmin), vmin=elecVmin,figure=self.scene.mayavi_scene)
             source2 = self.scene.mlab.pipeline.scalar_field(brainMask)
             self.scene.mlab.pipeline.iso_surface(source2,vmin=0,vmax=1,opacity=1.0,colormap='gray',figure=self.scene.mayavi_scene)
 
